@@ -8,7 +8,6 @@
 Calculator::Calculator(QWidget *parent)
     : QWidget(parent)
 {
-    sumInMemory = 0.0;
     sumSoFar = 0.0;
     factorSoFar = 0.0;
     waitingForOperand = true;
@@ -22,15 +21,17 @@ Calculator::Calculator(QWidget *parent)
     font.setPointSize(font.pointSize() + 8);
     display->setFont(font);
 
+    // Create digit buttons
     for (int i = 0; i < NumDigitButtons; ++i) {
         digitButtons[i] = createButton(QString::number(i), SLOT(digitClicked()));
     }
 
+    // Create buttons for interaction with the calculator
     Button *pointButton = createButton(tr("."), SLOT(pointClicked()));
     Button *changeSignButton = createButton(tr("\302\261"), SLOT(changeSignClicked()));
 
     Button *backspaceButton = createButton(tr("Backspace"), SLOT(backspaceClicked()));
-    Button *clearAllButton = createButton(tr("Clear All"), SLOT(clearAll()));
+    Button *clearAllButton = createButton(tr("Clear"), SLOT(clearAll()));
 
     Button *divisionButton = createButton(tr("\303\267"), SLOT(multiplicativeOperatorClicked()));
     Button *timesButton = createButton(tr("\303\227"), SLOT(multiplicativeOperatorClicked()));
@@ -39,13 +40,12 @@ Calculator::Calculator(QWidget *parent)
 
     Button *squareRootButton = createButton(tr("Sqrt"), SLOT(unaryOperatorClicked()));
     Button *reciprocalButton = createButton(tr("1/x"), SLOT(unaryOperatorClicked()));
-    Button *equalButton = createButton(tr("="), SLOT(equalClicked()));
+    Button *equalButton = createButton(tr("Enter"), SLOT(equalClicked()));
 
+    // Create a grid layout and add the buttons to the interface
     QGridLayout *mainLayout = new QGridLayout;
     mainLayout->setSizeConstraint(QLayout::SetFixedSize);
-    mainLayout->addWidget(display, 0, 0, 1, 6);
-    mainLayout->addWidget(backspaceButton, 1, 1, 1, 2);
-    mainLayout->addWidget(clearAllButton, 1, 3, 1, 2);
+    setWindowTitle(tr("Calculator"));
 
     for (int i = 1; i < NumDigitButtons; ++i) {
         int row = ((9 - i) / 3) + 2;
@@ -54,20 +54,20 @@ Calculator::Calculator(QWidget *parent)
     }
 
     mainLayout->addWidget(digitButtons[0], 5, 1, 1, 2);
-    mainLayout->addWidget(pointButton, 5, 3);
 
+    mainLayout->addWidget(display, 0, 0, 1, 6);
+    mainLayout->addWidget(backspaceButton, 1, 1, 1, 2);
+    mainLayout->addWidget(clearAllButton, 1, 3, 1, 2);
+    mainLayout->addWidget(pointButton, 5, 3);
     mainLayout->addWidget(divisionButton, 2, 4);
     mainLayout->addWidget(timesButton, 3, 4);
     mainLayout->addWidget(minusButton, 4, 4);
     mainLayout->addWidget(plusButton, 5, 4);
-
     mainLayout->addWidget(squareRootButton, 2, 5);
-    mainLayout->addWidget(reciprocalButton, 1, 5);
+    mainLayout->addWidget(reciprocalButton, 3, 5);
     mainLayout->addWidget(equalButton, 4, 5, 2, 1);
-    mainLayout->addWidget(changeSignButton, 3, 5);
+    mainLayout->addWidget(changeSignButton, 1, 5);
     setLayout(mainLayout);
-
-    setWindowTitle(tr("Calculator"));
 }
 
 void Calculator::digitClicked()
