@@ -8,9 +8,6 @@
 Calculator::Calculator(QWidget *parent)
     : QWidget(parent)
 {
-    sumSoFar = 0.0;
-    factorSoFar = 0.0;
-    waitingForOperand = true;
 
     display = new QLineEdit("0");
     display->setReadOnly(true);
@@ -33,10 +30,10 @@ Calculator::Calculator(QWidget *parent)
     Button *backspaceButton = createButton(tr("Backspace"), SLOT(backspaceClicked()));
     Button *clearAllButton = createButton(tr("Clear"), SLOT(clearAll()));
 
-    Button *divisionButton = createButton(tr("\303\267"), SLOT(multiplicativeOperatorClicked()));
-    Button *timesButton = createButton(tr("\303\227"), SLOT(multiplicativeOperatorClicked()));
-    Button *minusButton = createButton(tr("-"), SLOT(additiveOperatorClicked()));
-    Button *plusButton = createButton(tr("+"), SLOT(additiveOperatorClicked()));
+    Button *divisionButton = createButton(tr("\303\267"), SLOT(binaryOperatorClicked()));
+    Button *timesButton = createButton(tr("\303\227"), SLOT(binaryOperatorClicked()));
+    Button *minusButton = createButton(tr("-"), SLOT(binaryOperatorClicked()));
+    Button *plusButton = createButton(tr("+"), SLOT(binaryOperatorClicked()));
 
     Button *squareRootButton = createButton(tr("Sqrt"), SLOT(unaryOperatorClicked()));
     Button *reciprocalButton = createButton(tr("1/x"), SLOT(unaryOperatorClicked()));
@@ -70,20 +67,34 @@ Calculator::Calculator(QWidget *parent)
     setLayout(mainLayout);
 }
 
+// Function that updates the display when a digit is clicked
 void Calculator::digitClicked()
 {
     Button *clickedButton = qobject_cast<Button *>(sender());
-    int digitValue = clickedButton->text().toInt();
-    if (display->text() == "0" && digitValue == 0.0)
-        return;
+    double digitValue = clickedButton->text().toInt();
 
-    if (waitingForOperand) {
-        display->clear();
+    operatorClicked = false;
+
+    // If a number was previosly saved to the stack, start a new digit
+    if (waitingForOperand)
+    {
+        display->setText("0");
         waitingForOperand = false;
     }
-    display->setText(display->text() + QString::number(digitValue));
+
+    if (display->text() == "0")
+    {
+        display->setText(QString::number(digitValue)); // if currently zero, replace with new input
+    }
+    else
+    {
+        display->setText(display->text() + QString::number(digitValue)); // append to the digit
+    }
+    return;
 }
 
+// Function that uses the displayed value, calculates the square root
+// and displays the result
 void Calculator::unaryOperatorClicked()
 {
     Button *clickedButton = qobject_cast<Button *>(sender());
@@ -107,97 +118,52 @@ void Calculator::unaryOperatorClicked()
         result = 1.0 / operand;
     }
     display->setText(QString::number(result));
-    waitingForOperand = true;
 }
 
-void Calculator::additiveOperatorClicked()
+// Takes the top two elements from the stack and adds/subtracts them
+void Calculator::binaryOperatorClicked()
 {
     Button *clickedButton = qobject_cast<Button *>(sender());
     QString clickedOperator = clickedButton->text();
-    double operand = display->text().toDouble();
+    operatorClicked = true;
 
-    if (!pendingMultiplicativeOperator.isEmpty()) {
-        if (!calculate(operand, pendingMultiplicativeOperator)) {
-            abortOperation();
-            return;
-        }
-        display->setText(QString::number(factorSoFar));
-        operand = factorSoFar;
-        factorSoFar = 0.0;
-        pendingMultiplicativeOperator.clear();
-    }
-
-    if (!pendingAdditiveOperator.isEmpty()) {
-        if (!calculate(operand, pendingAdditiveOperator)) {
-            abortOperation();
-            return;
-        }
-        display->setText(QString::number(sumSoFar));
-    } else {
-        sumSoFar = operand;
-    }
-
-    pendingAdditiveOperator = clickedOperator;
-    waitingForOperand = true;
-}
-
-void Calculator::multiplicativeOperatorClicked()
-{
-    Button *clickedButton = qobject_cast<Button *>(sender());
-    QString clickedOperator = clickedButton->text();
-    double operand = display->text().toDouble();
-
-    if (!pendingMultiplicativeOperator.isEmpty()) {
-        if (!calculate(operand, pendingMultiplicativeOperator)) {
-            abortOperation();
-            return;
-        }
-        display->setText(QString::number(factorSoFar));
-    } else {
-        factorSoFar = operand;
-    }
-
-    pendingMultiplicativeOperator = clickedOperator;
-    waitingForOperand = true;
+    pendingOperator = clickedOperator;
 }
 
 void Calculator::equalClicked()
 {
-    double operand = display->text().toDouble();
 
-    if (!pendingMultiplicativeOperator.isEmpty()) {
-        if (!calculate(operand, pendingMultiplicativeOperator)) {
+    double input = display->text().toDouble();
+   // double operand = display->text().toDouble();
+
+    if (operatorClicked)
+    {
+        if (!calculate(pendingOperator))
+        {
             abortOperation();
             return;
         }
-        operand = factorSoFar;
-        factorSoFar = 0.0;
-        pendingMultiplicativeOperator.clear();
-    }
-    if (!pendingAdditiveOperator.isEmpty()) {
-        if (!calculate(operand, pendingAdditiveOperator)) {
-            abortOperation();
-            return;
+        else
+        {
+            display->setText(QString::number(result.top()));
         }
-        pendingAdditiveOperator.clear();
-    } else {
-        sumSoFar = operand;
+        operatorClicked = false;
     }
-
-    display->setText(QString::number(sumSoFar));
-    sumSoFar = 0.0;
-    waitingForOperand = true;
+    else
+    {
+        result.push(input);
+        waitingForOperand = true;
+    }
 }
 
+// Add a decimal point
 void Calculator::pointClicked()
 {
-    if (waitingForOperand)
-        display->setText("0");
     if (!display->text().contains('.'))
         display->setText(display->text() + tr("."));
-    waitingForOperand = false;
 }
 
+// Function that changes the sign of the digits
 void Calculator::changeSignClicked()
 {
     QString text = display->text();
@@ -211,61 +177,33 @@ void Calculator::changeSignClicked()
     display->setText(text);
 }
 
+// Function that removes the last digit clicked
 void Calculator::backspaceClicked()
 {
-    if (waitingForOperand)
-        return;
 
     QString text = display->text();
     text.chop(1);
     if (text.isEmpty()) {
         text = "0";
-        waitingForOperand = true;
     }
     display->setText(text);
 }
 
-void Calculator::clear()
-{
-    if (waitingForOperand)
-        return;
-
-    display->setText("0");
-    waitingForOperand = true;
-}
-
+// Function that sets all variables to a default
 void Calculator::clearAll()
 {
-    sumSoFar = 0.0;
-    factorSoFar = 0.0;
-    pendingAdditiveOperator.clear();
-    pendingMultiplicativeOperator.clear();
+    pendingOperator.clear();
     display->setText("0");
-    waitingForOperand = true;
+    waitingForOperand = false;
+    operatorClicked = false;
+
+    for (int i = 0; i < result.size(); i++)
+    {
+        result.pop();
+    }
 }
 
-void Calculator::clearMemory()
-{
-    sumInMemory = 0.0;
-}
-
-void Calculator::readMemory()
-{
-    display->setText(QString::number(sumInMemory));
-    waitingForOperand = true;
-}
-
-void Calculator::setMemory()
-{
-    equalClicked();
-    sumInMemory = display->text().toDouble();
-}
-
-void Calculator::addToMemory()
-{
-    equalClicked();
-    sumInMemory += display->text().toDouble();
-}
+// Function used to create buttons for the interface
 Button *Calculator::createButton(const QString &text, const char *member)
 {
     Button *button = new Button(text);
@@ -273,24 +211,49 @@ Button *Calculator::createButton(const QString &text, const char *member)
     return button;
 }
 
+// Function that displays an error
 void Calculator::abortOperation()
 {
     clearAll();
-    display->setText(tr("####"));
+    display->setText(tr("Invalid Input"));
 }
 
-bool Calculator::calculate(double rightOperand, const QString &pendingOperator)
+bool Calculator::calculate(const QString &pendingOperator)
 {
-    if (pendingOperator == tr("+")) {
-        sumSoFar += rightOperand;
-    } else if (pendingOperator == tr("-")) {
-        sumSoFar -= rightOperand;
-    } else if (pendingOperator == tr("\303\227")) {
-        factorSoFar *= rightOperand;
-    } else if (pendingOperator == tr("\303\267")) {
-        if (rightOperand == 0.0)
-            return false;
-        factorSoFar /= rightOperand;
+    double first_operand, second_operand;
+
+    if (result.size() < 2) {
+        return false; // not enough arguments
     }
+    else
+    {
+        first_operand = result.top();
+        result.pop();
+        second_operand = result.top();
+        result.pop();
+    }
+
+    if (pendingOperator == tr("+"))
+    {
+        result.push(first_operand + second_operand);
+    }
+    else if (pendingOperator == tr("-"))
+    {
+        result.push(second_operand - first_operand);
+    }
+    else if (pendingOperator == tr("\303\227"))
+    {
+        result.push(first_operand * second_operand);
+    }
+    else if (pendingOperator == tr("\303\267"))
+    {
+        if (second_operand == 0.0)
+        {
+            return false; // can't divide by zero
+        }
+        result.push(second_operand / first_operand);
+    }
+
+    display->setText(QString::number(result.top()));
     return true;
 }

@@ -2,6 +2,7 @@
 #define CALCULATOR_H
 
 #include <QWidget>
+#include <stack>
 
 class QLineEdit;
 
@@ -17,30 +18,26 @@ public:
 private slots:
     void digitClicked();
     void unaryOperatorClicked();
-    void additiveOperatorClicked();
-    void multiplicativeOperatorClicked();
+    void binaryOperatorClicked();
     void equalClicked();
     void pointClicked();
     void changeSignClicked();
     void backspaceClicked();
-    void clear();
     void clearAll();
-    void clearMemory();
-    void readMemory();
-    void setMemory();
-    void addToMemory();
 
 private:
     Button *createButton(const QString &text, const char *member);
     void abortOperation();
-    bool calculate(double rightOperand, const QString &pendingOperator);
+    bool calculate(const QString &pendingOperator);
 
-    double sumInMemory;
-    double sumSoFar;
-    double factorSoFar;
-    QString pendingAdditiveOperator;
-    QString pendingMultiplicativeOperator;
+    QString pendingOperator;
+
+    std::stack<double> result;
+    std::stack<double> factor;
+
     bool waitingForOperand;
+    bool operatorClicked;
+
 
     QLineEdit *display;
 
